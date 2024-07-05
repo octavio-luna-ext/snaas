@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  localstack:
+    image: localstack/localstack
+    container_name: localstack
+    ports:
+      - "4566:4566"  # Gateway port for all LocalStack services
+      - "4510-4559:4510-4559"  # Additional service ports
+    environment:
+      - DOCKER_HOST=unix:///var/run/docker.sock
+      - LOCALSTACK_SERVICES=s3,sqs,sns,dynamodb  # Specify services to run
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - AWS_REGION=us-east-1
+    volumes:
+      - "${LOCALSTACK_DOCKER_VOLUME:-./volume}:/var/lib/localstack"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    networks:
+      - app_network
+
+  postgres:
+    image: postgres:latest
+    container_name: postgres
+    environment:
+      POSTGRES_USER: ubuntu
+      POSTGRES_PASSWORD: unicode
+      POSTGRES_DB: circle_test
+    ports:
+      - "5432:5432"
+    networks:
+      - app_network
+
+  setup-db:
+    image: postgres:latest
+    container_name: setup-db
+    depends_on:
+      - postgres
+    entrypoint: ["/bin/sh", "-c", "until pg_isready -h postgres -U ubuntu; do sleep 1; done; PGPASSWORD=unicode psql -U ubuntu -d circle_test -f /docker-entrypoint-initdb.d/setup.sql -h postgres"]
+    volumes:
+      - ./platform/pg/setup.sql:/docker-entrypoint-initdb.d/setup.sql
+    networks:
+      - app_network
+
+networks:
+  app_network:
+    driver: bridge

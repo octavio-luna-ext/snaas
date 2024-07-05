@@ -116,7 +116,8 @@ func main() {
 			"sub", "telemetry",
 		)
 
-		http.Handle("/metrics", prometheus.Handler())
+		//TODO: prometheus.Handler is not a function, fix it
+		//http.Handle("/metrics", prometheus.Handler())
 
 		err := http.ListenAndServe(addr, nil)
 		if err != nil {

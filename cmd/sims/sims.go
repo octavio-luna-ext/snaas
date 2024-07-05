@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"net/http"
 	"os"
 	"time"
@@ -58,6 +59,7 @@ func main() {
 		awsID         = flag.String("aws.id", "", "Identifier for AWS requests")
 		awsRegion     = flag.String("aws.region", "us-east-1", "AWS region to operate in")
 		awsSecret     = flag.String("aws.secret", "", "Identification secret for AWS requests")
+		awsUrl        = flag.String("aws.url", "", "AWS URL to connect to")
 		postgresURL   = flag.String("postgres.url", "", "Postgres URL to connect to")
 		telemetryAddr = flag.String("telemetry.addr", ":9001", "Address to expose telemetry on")
 	)
@@ -86,7 +88,8 @@ func main() {
 			"sub", "telemetry",
 		)
 
-		http.Handle("/metrics", prometheus.Handler())
+		//TODO: prometheus.Handler is not a function, fix it
+		//http.Handle("/metrics", prometheus.Handler())
 
 		err := http.ListenAndServe(addr, nil)
 		if err != nil {
@@ -130,15 +133,18 @@ func main() {
 	prometheus.MustRegister(sourceQueueLatency)
 
 	// Setup clients.
-	var (
-		aSession = awsSession.New(&aws.Config{
-			Credentials: credentials.NewStaticCredentials(*awsID, *awsSecret, ""),
-			Region:      aws.String(*awsRegion),
-		})
-		snsAPI = sns.New(aSession)
-		sqsAPI = sqs.New(aSession)
-	)
 
+	fmt.Println("Aws url: ", *awsUrl)
+	aSession := awsSession.New(&aws.Config{
+		Region:      aws.String(*awsRegion),
+		Credentials: credentials.NewStaticCredentials(*awsID, *awsSecret, ""),
+		Endpoint:    aws.String(*awsUrl),
+	})
+
+	snsAPI := sns.New(aSession)
+	sqsAPI := sqs.New(aSession)
+
+	fmt.Println("Postgres URL: ", *postgresURL)
 	pgClient, err := sqlx.Connect(storeService, *postgresURL)
 	if err != nil {
 		logger.Log("err", err, "lifecycle", "abort")
@@ -234,6 +240,7 @@ func main() {
 	conSource = connection.LogSourceMiddleware(sourceService, logger)(conSource)
 
 	eventSource, err := event.SQSSource(sqsAPI)
+	fmt.Println("First call, err: ", err)
 	if err != nil {
 		logger.Log("err", err, "lifecycle", "abort")
 		os.Exit(1)
@@ -427,6 +434,7 @@ func main() {
 }
 
 func queueName(api platformSQS.API, name string) (string, error) {
+	fmt.Println("DEBUG: ", *aws.String(name))
 	res, err := api.GetQueueUrl(&sqs.GetQueueUrlInput{
 		QueueName: aws.String(name),
 	})
