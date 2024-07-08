@@ -88,6 +88,7 @@ func main() {
 	var (
 		env          = flag.String("env", "", "Environment used for isolation.")
 		region       = flag.String("region", "", "AWS region to deploy to.")
+		awsUrl       = flag.String("aws.url", "", "AWS URL to connect to")
 		statesPath   = flag.String("states.path", defaultStatesPath, "Location to store env states.")
 		stateRemote  = flag.Bool("state.remote", false, "Control if state is stored remotely in s3.")
 		templatePath = flag.String("template.path", defaultTemplatePath, "Location of the infrastructure template.")
@@ -105,7 +106,8 @@ func main() {
 				&credentials.SharedCredentialsProvider{},
 			},
 		),
-		Region: aws.String(*region),
+		Region:   aws.String(*region),
+		Endpoint: aws.String(*awsUrl),
 	})
 	if err != nil {
 		log.Fatalf("%#v\n", err)
@@ -242,7 +244,7 @@ func main() {
 		if *stateRemote {
 			var (
 				bucket = fmt.Sprintf(fmtBucketState, account)
-				svcS3  = s3.New(awsSession, aws.NewConfig().WithRegion(*region))
+				svcS3  = s3.New(awsSession, aws.NewConfig().WithRegion(*region).WithEndpoint(*awsUrl))
 			)
 
 			_, err = svcS3.HeadBucket(&s3.HeadBucketInput{

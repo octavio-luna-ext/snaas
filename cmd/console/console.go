@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"flag"
 	"fmt"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"html/template"
 	"math/rand"
 	"net/http"
@@ -124,7 +125,8 @@ func main() {
 			"sub", "telemetry",
 		)
 
-		http.Handle("/metrics", prometheus.Handler())
+		//TODO: prometheus.Handler is not a function, check the correct way to use it and metrics we want
+		http.Handle("/metrics", promhttp.HandlerFor(prometheus.DefaultGatherer, promhttp.HandlerOpts{}))
 
 		err := http.ListenAndServe(addr, nil)
 		if err != nil {

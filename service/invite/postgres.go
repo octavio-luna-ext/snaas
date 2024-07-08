@@ -2,6 +2,7 @@ package invite
 
 import (
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -57,6 +58,12 @@ type pgService struct {
 
 // PostgresService returns a Postgres based Service implementation.
 func PostgresService(db *sqlx.DB) Service {
+
+	err := db.Ping()
+	if err != nil {
+		log.Fatalf("Failed to ping database: %v", err)
+	}
+
 	return &pgService{
 		db: db,
 	}

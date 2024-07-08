@@ -1,0 +1,118 @@
+version: '3.8'
+
+services:
+  localstack:
+    image: localstack/localstack
+    container_name: localstack
+    ports:
+      - "4566:4566"  # Gateway port for all LocalStack services
+      - "4510-4559:4510-4559"  # Additional service ports
+    environment:
+      - DOCKER_HOST=unix:///var/run/docker.sock
+      - LOCALSTACK_SERVICES=s3,sqs,sns,dynamodb,sts  # Specify services to run
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - AWS_REGION=us-east-1
+    volumes:
+      - "${LOCALSTACK_DOCKER_VOLUME:-./volume}:/var/lib/localstack"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    networks:
+      - app_network
+
+  postgres:
+    image: postgis/postgis:16-master
+    container_name: postgres
+    environment:
+      POSTGRES_USER: ubuntu
+      POSTGRES_PASSWORD: unicode
+      POSTGRES_DB: circle_test
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./platform/pg/setup.sql:/docker-entrypoint-initdb.d/setup.sql
+    networks:
+      - app_network
+
+  redis:
+    image: redis:latest
+    container_name: redis
+    ports:
+      - "6379:6379"  # Redis default port
+    networks:
+      - app_network
+
+  setup-queues:
+    image: amazon/aws-cli
+    depends_on:
+      - localstack
+    entrypoint: >
+      /bin/sh -c "
+      until aws --endpoint-url=http://localstack:4566 sqs create-queue --queue-name connection-state-change &&
+            aws --endpoint-url=http://localstack:4566 sqs create-queue --queue-name event-state-change &&
+            aws --endpoint-url=http://localstack:4566 sqs create-queue --queue-name object-state-change &&
+            aws --endpoint-url=http://localstack:4566 sqs create-queue --queue-name reaction-state-change &&
+            aws --endpoint-url=http://localstack:4566 sqs create-queue --queue-name endpoint-state-change; do
+        sleep 1;
+      done;"
+    environment:
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - AWS_REGION=us-east-1
+    networks:
+      - app_network
+
+  sims:
+    build:
+      dockerfile: infrastructure/docker/sims.Dockerfile
+      context: .
+    container_name: sims
+    environment:
+      - POSTGRES_URL=postgres://ubuntu:unicode@postgres/circle_test?sslmode=disable
+      - AWS_URL=http://localstack:4566
+      - AWS_ID=test
+      - AWS_SECRET=test
+      - AWS_REGION=us-east-1
+    depends_on:
+      - localstack
+      - setup-queues
+    networks:
+      - app_network
+    restart: on-failure
+
+  gateway-http:
+    build:
+      dockerfile: infrastructure/docker/gateway.Dockerfile
+      context: .
+    container_name: gateway-http
+    environment:
+      - POSTGRES_URL=postgres://ubuntu:unicode@postgres/circle_test?sslmode=disable
+      - AWS_URL=http://localstack:4566
+      - AWS_ID=test
+      - AWS_SECRET=test
+      - AWS_REGION=us-east-1
+    depends_on:
+      - localstack
+      - setup-queues
+    networks:
+      - app_network
+    restart: on-failure
+
+  console:
+    build:
+      dockerfile: infrastructure/docker/console.Dockerfile
+      context: .
+    container_name: console
+    environment:
+      - POSTGRES_URL=postgres://ubuntu:unicode@postgres/circle_test?sslmode=disable
+      - ENV=dev
+      - AWS_REGION=us-east-1
+    depends_on:
+      - localstack
+      - setup-queues
+    networks:
+      - app_network
+    restart: on-failure
+
+networks:
+  app_network:
+    driver: bridge

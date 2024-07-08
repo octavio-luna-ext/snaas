@@ -2,6 +2,7 @@ package reaction
 
 import (
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -21,6 +22,7 @@ type sqsSource struct {
 
 // SQSSource returns an SQS backed Source implementation.
 func SQSSource(api platformSQS.API) (Source, error) {
+	fmt.Println("DEBUG: ", *aws.String(queueName))
 	res, err := api.GetQueueUrl(&sqs.GetQueueUrlInput{
 		QueueName: aws.String(queueName),
 	})
