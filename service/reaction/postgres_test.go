@@ -1,3 +1,4 @@
+//go:build integration
 // +build integration
 
 package reaction
@@ -57,8 +58,7 @@ func init() {
 		user.Username,
 	)
 
-	url := flag.String("postgres.url", d, "Postgres connection URL")
-	flag.Parse()
+	flag.StringVar(&pgURL, "postgres.url", d, "Postgres connection URL")
 
-	pgURL = *url
+	testing.Init()
 }

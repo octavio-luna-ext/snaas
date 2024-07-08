@@ -3,16 +3,28 @@
 set -e
 set -o pipefail
 
-echo "|> install gimme"
-sudo curl -sL -o /usr/local/bin/gimme https://raw.githubusercontent.com/travis-ci/gimme/master/gimme
-sudo chmod +x /usr/local/bin/gimme
+echo "|> install go 1.21"
 
-echo "|> install Go"
-gimme 1.8.3
-source ~/.gimme/envs/go1.8.3.env
+# Install Go 1.21
+GO_VERSION=1.21
+GO_TAR=go$GO_VERSION.linux-amd64.tar.gz
+GO_URL=https://go.dev/dl/$GO_TAR
+
+echo "|> downloading Go $GO_VERSION"
+curl -LO $GO_URL
+sudo tar -C /usr/local -xzf $GO_TAR
+rm $GO_TAR
+
+# Set up Go environment variables
+export PATH=$PATH:/usr/local/go/bin
+export GOPATH=/home/ubuntu/go
+export PATH=$PATH:$GOPATH/bin
+
+# Verify Go installation
+go version
 
 echo "|> install static asset tool"
-go get github.com/mjibson/esc
+go install github.com/mjibson/esc@latest
 
 echo "|> install Elm tooling"
 npm install -g elm
@@ -20,12 +32,11 @@ npm install -g elm-test
 
 echo "|> install sysconf"
 cd /home/ubuntu
-if [ ! -d sysconfcpus/bin ];
-then
-	git clone https://github.com/obmarg/libsysconfcpus.git
-	cd libsysconfcpus
-	./configure --prefix=/home/ubuntu/sysconfcpus
-	make && make install
+if [ ! -d sysconfcpus/bin ]; then
+    git clone https://github.com/obmarg/libsysconfcpus.git
+    cd libsysconfcpus
+    ./configure --prefix=/home/ubuntu/sysconfcpus
+    make && make install
 fi
 
 echo "|> install Elm packages"
@@ -39,4 +50,4 @@ cp -R /home/ubuntu/snaas /home/ubuntu/.go_workspace/src/github.com/tapglue/
 
 echo "|> install Go packages"
 cd /home/ubuntu/.go_workspace/src/github.com/tapglue/snaas
-go get -d -v -t ./...
+go mod download

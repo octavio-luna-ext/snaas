@@ -1,3 +1,4 @@
+//go:build integration
 // +build integration
 
 package invite
@@ -45,8 +46,7 @@ func init() {
 
 	d := fmt.Sprintf(pg.URLTest, u.Username)
 
-	url := flag.String("postgres.url", d, "Postgres test connection URL")
-	flag.Parse()
+	flag.StringVar(&pgTestURL, "postgres.url", d, "Postgres connection URL")
 
-	pgTestURL = *url
+	testing.Init()
 }
