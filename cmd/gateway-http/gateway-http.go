@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"net/http"
 	"os"
 	"time"
@@ -84,6 +85,7 @@ func main() {
 		awsID         = flag.String("aws.id", "", "Identifier for AWS requests")
 		awsRegion     = flag.String("aws.region", "us-east-1", "AWS Region to operate in")
 		awsSecret     = flag.String("aws.secret", "", "Identification secret for AWS requests")
+		awsUrl        = flag.String("aws.url", "", "AWS URL to connect to")
 		listenAddr    = flag.String("listen.addr", ":8083", "HTTP bind address for main API")
 		postgresURL   = flag.String("postgres.url", "", "Postgres URL to connect to")
 		redisAddr     = flag.String("redis.addr", ":6379", "Redis address to connect to")
@@ -116,8 +118,8 @@ func main() {
 			"sub", "telemetry",
 		)
 
-		//TODO: prometheus.Handler is not a function, fix it
-		//http.Handle("/metrics", prometheus.Handler())
+		//TODO: prometheus.Handler is not a function, check the correct way to use it and metrics we want
+		http.Handle("/metrics", promhttp.HandlerFor(prometheus.DefaultGatherer, promhttp.HandlerOpts{}))
 
 		err := http.ListenAndServe(addr, nil)
 		if err != nil {
@@ -181,15 +183,15 @@ func main() {
 	prometheus.MustRegister(sourceQueueLatency)
 
 	// Setup clients.
-	var (
-		aSession = awsSession.New(&aws.Config{
-			Credentials: credentials.NewStaticCredentials(*awsID, *awsSecret, ""),
-			Region:      aws.String(*awsRegion),
-		})
-		redisPool   = redis.Pool(*redisAddr, "")
-		rateLimiter = limiter.Redis(redisPool, prefixRateLimiter)
-		sqsAPI      = sqs.New(aSession)
-	)
+	fmt.Println("Aws url: ", *awsUrl)
+	aSession := awsSession.New(&aws.Config{
+		Credentials: credentials.NewStaticCredentials(*awsID, *awsSecret, ""),
+		Region:      aws.String(*awsRegion),
+		Endpoint:    aws.String(*awsUrl),
+	})
+	redisPool := redis.Pool(*redisAddr, "")
+	rateLimiter := limiter.Redis(redisPool, prefixRateLimiter)
+	sqsAPI := sqs.New(aSession)
 
 	pgClient, err := sqlx.Connect(storeService, *postgresURL)
 	if err != nil {

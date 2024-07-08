@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"net/http"
 	"os"
 	"time"
@@ -88,8 +89,8 @@ func main() {
 			"sub", "telemetry",
 		)
 
-		//TODO: prometheus.Handler is not a function, fix it
-		//http.Handle("/metrics", prometheus.Handler())
+		//TODO: prometheus.Handler is not a function, check the correct way to use it and metrics we want
+		http.Handle("/metrics", promhttp.HandlerFor(prometheus.DefaultGatherer, promhttp.HandlerOpts{}))
 
 		err := http.ListenAndServe(addr, nil)
 		if err != nil {
