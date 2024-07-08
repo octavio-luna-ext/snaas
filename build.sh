@@ -1,20 +1,20 @@
 #!/bin/bash
 
 # Paths to the binaries
-CONSOLE_BINARY="bin/console/console"
-GATEWAY_HTTP_BINARY="bin/gateway-http/gateway-http"
-SIMS_BINARY="bin/sims/sims"
+CONSOLE_BINARY="./bin/console/console"
+GATEWAY_HTTP_BINARY="./bin/gateway-http/gateway-http"
+SIMS_BINARY="./bin/sims/sims"
 
 # Paths to the source files
-CONSOLE_SRC="cmd/console/*.go"
-GATEWAY_HTTP_SRC="cmd/gateway-http/*.go"
-SIMS_SRC="cmd/sims/*.go"
+CONSOLE_SRC="./cmd/console/*.go"
+GATEWAY_HTTP_SRC="./cmd/gateway-http/*.go"
+SIMS_SRC="./cmd/sims/*.go"
 
 # Path to the Dockerfile
-DOCKERFILE_PATH="infrastructure/docker/snaas.Dockerfile"
+DOCKERFILE_PATH="./infrastructure/docker/snaas.Dockerfile"
 
 # Docker image name
-IMAGE_NAME="tapglue/snaas"
+IMAGE_NAME="octaviolunaext/snaas"
 
 # Function to build the binary
 build_binary() {

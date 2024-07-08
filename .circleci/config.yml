@@ -46,20 +46,20 @@ jobs:
 
   build_and_deploy:
     docker:
-      - image: circleci/python:3.7
+      - image: cimg/go:1.21
     executor: default
     steps:
       - checkout
       - setup_remote_docker
       - run:
           name: Build Docker Container
-          command: ./build
+          command: ./build.sh
       - run:
           name: Login to DockerHub
           command: docker login -u ${DOCKERHUB_USERNAME} -p ${DOCKERHUB_PASSWORD}
       - run:
           name: Push Docker Image
-          command: docker push tapglue/snaas
+          command: docker push octaviolunaext/snaas
 
 workflows:
   version: 2
@@ -69,3 +69,6 @@ workflows:
       - build_and_deploy:
           requires:
             - test  # Ensure tests pass before building and deploying
+          filters:
+              branches:
+                  only: master
