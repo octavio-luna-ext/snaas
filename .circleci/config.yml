@@ -69,6 +69,3 @@ workflows:
       - build_and_deploy:
           requires:
             - test  # Ensure tests pass before building and deploying
-          filters:
-            branches:
-              only: master
